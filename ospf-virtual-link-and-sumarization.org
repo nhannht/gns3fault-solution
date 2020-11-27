@@ -1,7 +1,7 @@
 #+TITLE:OSPF Virtual link and summarization 
 
 [[file:_assets/2020-11-26_23-39-00_screenshot.png]]
-** +The Company you are currently working for has recently bought a smaller organization and now needs to connect the 2 networks together. Company policy specifies that only OSPF can be used as a routing protocol and it’s physically impossible to connect the Louie router to the Huey router. Up to you to find a good solution…!+ Công ty bạn đang làm việc vừa mua lại một tổ chứ nhỏ hơn và cần phải kết nối 2 mạng lưới lại với nhau. Chính sách của công ty yêu cầu rằng OSPF cần phải được dùng là giao thức định tuyến và về mặt vật lý là bất khả thi để kết nối Louie và Huey. Đây là lúc bạn thể hiện tài năng của mình
+**  Công ty bạn đang làm việc vừa mua lại một tổ chứ nhỏ hơn và cần phải kết nối 2 mạng lưới lại với nhau. Chính sách của công ty yêu cầu rằng OSPF cần phải được dùng là giao thức định tuyến và về mặt vật lý là bất khả thi để kết nối Louie và Huey. Đây là lúc bạn thể hiện tài năng của mình
    #+begin_example
    Note: OSPF là giao thức định tuyến theo chuẩn mở rất phổ biến trong các mạng lớn, không như giao thức rip hoạt động bằng cách trao đổi bảng định tuyến giữa các neighbor và tính metric dựa trên hop. OSPF chỉ trao đổi thông tin về các link. ospf tính metric dựa trên bandwich và ưu tiên đường đi nào có bandwhich lớn nhất. 
    #+end_example
@@ -15,7 +15,7 @@
    #+end_src
 
      
-** +Configure OSPF on all routers, configure the areas as specified in the topology picture.+ Cài đặt ospf cho mọi router với các khu vực như trong hình
+**  Cài đặt ospf cho mọi router với các khu vực như trong hình
    
       #+begin_src python
 
@@ -47,7 +47,7 @@ Kiểm tra ping từ louie tới huey
 [[file:_assets/2020-11-26_23-25-44_screenshot.png]]
 
     
-** +Create some extra loopbacks on router Louie and advertise them in area 2:+ Tạo thêm một số loopback interface cho router louie và quảng bá chúng trên area2 +Make sure router Huey only sees 172.16.0.0/22 in it’s routing table, you are only allowed to make changes to router Dewey.+ Đảm bảo rằng huey chỉ nhìn thấy 172.16.0.0/22 trên bảng định tuyến của nó, nhưng bạn chỉ được phép tinh chỉnh trên router Dewey
+**  Đảm bảo rằng huey chỉ nhìn thấy 172.16.0.0/22 trên bảng định tuyến của nó, nhưng bạn chỉ được phép tinh chỉnh trên router Dewey
     #+begin_example
     - Loopback0: 172.16.0.1 /24
     - Loopback1: 172.16.1.1 /24

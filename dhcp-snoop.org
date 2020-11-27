@@ -3,7 +3,7 @@ https://gns3vault.com/switching/dhcp-snooping
 
 ** Tình huống:
    - Một trong những khác hàng của bạn bị tấn công trong hệ thống hạ tầng switch của họ. Bạn là một chuyên gia về switch và phải tìm kiếm một phương pháp để chặn kiểu tấn công DHCP spoofing. Hãy thể hiện kỹ năng của bạn nào
-   - +One of your customers is being plagued by attacks on their switched infrastructure. You as a specialized switch specialist are looking for a method to counter DHCP spoofing attacks. Let’s see what you can do for them…+
+   - 
 
 ** Configure the IP addresses on router Attacker and DHCP as specified in the topology picture.
 #+DOWNLOADED: screenshot @ 2020-11-25 21:01:55
@@ -42,7 +42,7 @@ https://gns3vault.com/switching/dhcp-snooping
  [[file:_assets/2020-11-27_01-07-50_screenshot.png]]
 #+DOWNLOADED: screenshot @ 2020-11-27 01:08:19
 [[file:_assets/2020-11-27_01-08-19_screenshot.png]]
-** +Configure DHCP snooping globally on SW1.+ Cài đặt DHCP snooping  toàn topo trên SW1
+**  Cài đặt DHCP snooping  toàn topo trên SW1
  Note: DHCP snooping là kỹ thuật chặn dhcp spoofing , switch sẽ xây dựng database về các cổng nào ~trust~ hay ~untrust~ và chỉ cho phép packet ~dhcp offer~  từ các dhcp server đi qua các cổng trust. Đồng thời nó cũng lưu lại địa chỉ mac của máy nào đã được cấp dhcp. Cũng như ta có thể debug để nhận biết các tín hiệu dhcp nào đã đi qua switch 
     #+begin_src python
       # dòng lệnh này để tắt việc chèn option 82 vào các dhcp DISCOVER packet từ dhcp client đi qua nó. Chúng ta không đi sâu vào đây, nhưng nói một cách dễ hiểu, nếu không tắt đi thì sẽ dẫn đến những hành vi không mong muốn (unexpected behaviour) trên dhcp server và nó sẽ không trả về ip theo yeu cầu của client
@@ -76,7 +76,7 @@ Kiểm tra database của switch về ip nào đã cấp phát và hiện đang 
 #+DOWNLOADED: screenshot @ 2020-11-27 01:24:57
 [[file:_assets/2020-11-27_01-24-57_screenshot.png]]
  
-** +Configure router Attacker as a DHCP server to verify your DHCP snooping configuration.+ Kiểm tra xem dhcp snooping của bạn có hoạt động không
+**  Kiểm tra xem dhcp snooping của bạn có hoạt động không
 
    Dùng ba lệnh debug 
       #+begin_src python
