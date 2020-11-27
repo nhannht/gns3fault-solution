@@ -1,0 +1,72 @@
+#+TITLE: PAgP LACP Etherchannel
+[[file:_assets/2020-11-26_23-50-40_screenshot.png]]
+
+** Tình huống
++You are a master of spanning tree and specialized in migration scenarios. Corkscrew inc. is one of your customers and they are having issues with their switches. There are many VLANs in the network and you would like to reduce the number of spanning tree calculations. As a result you decide to implement MST (Multiple Spanning Tree) for them.+ Bạn là một chuyên gia về spanning tree và là chuyên gia về sắp xếp lại  toàn hệ thống (migration network). Công ty Corkscrew, một trong những khác hàng của bạn, có vấn đề với mấy cái switch của họ. Có quá nhiều vlans trong mạng lưới của họ và bạn cần phải giản số tính toán của của spanning tree xuống. Và kết quả là bạn phải áp dụng MST(multi spanning tree) cho hệ thống này.
+
+** +Configure PAgP between SW1 and SW2. SW1 should actively try to form an Etherchannel and SW2 should only respond to requests.+ Cài PAgP giữa sw1 và sw2. Sw1 chủ động tạo eth-channel và sw2 chỉ phản hồi
+   Note: PAgP là 1 trong 2 giao thức để thương lượng khi muốn lập etherchannel giữa 2 switch để kết hợp nhiều link lại với nhau. PAgP là độc quyền của cisco và dùng 2 mode desirable(chủ động) và auto (bị động) để thương lượng
+    #+begin_src python
+
+      - sw1(config)# int range g1/0-1
+
+      - sw1(config-if-range)# channel-group 12 desirable
+
+      - sw2(config)# int range g1/0-1
+
+      - sw2(config-if-range)# channel-group 12 auto
+
+    #+end_src
+      - sw1# ~show etherchannel summery~
+        #+DOWNLOADED: screenshot @ 2020-11-27 00:02:19
+ [[file:_assets/2020-11-27_00-02-19_screenshot.png]]
+    - sw2# ~show etherch 12 port-channel~
+      #+DOWNLOADED: screenshot @ 2020-11-27 00:04:12
+ [[file:_assets/2020-11-27_00-04-12_screenshot.png]]
+
+
+
+** +Configure LACP between SW1 and SW3. SW1 should actively try to form an Etherchannel and SW3 should only respond to requests.+ Cài đặt LACP giữa SW1 và SW3. SW1  chủ động tạo Etherchannel và Sw3 chỉ phản hồi lại các yêu cầu đó
+   Note: LACP tương tự như PAgP, nhưng là open standard và  khả năng hỗ trợ số port cao hơn PAgP 
+   #+begin_src python
+   - sw1(config)# int range g3/0-1
+   - sw1(config-if-range)# channel-group 13 mode active
+   - sw3(config)#int range g3/0-1
+   - sw3(config-if-range)# channel-group 13 mode passive
+   #+end_src
+
+     #+DOWNLOADED: screenshot @ 2020-11-27 00:09:27
+     [[file:_assets/2020-11-27_00-09-27_screenshot.png]]
+
+** +Configure an Etherchannel between SW2 and SW3. You are not allowed to use any protocol for negotiation.+ Cài Eth-channel giữa sw2 và sw3, bạn không được dùng bất kỳ giao thức nào cho việc thỏa hiệp giữa 2 switch
+   + Mode on là không dùng bất kỳ giao thức thương lượng nào cả. Không được khuyến khích dùng vì dễ gây ra loop giữa 2 đầu. 
+   #+begin_src python
+   - sw2(config)#int range g2/0-1
+
+   - sw2(config-if-range)#channel-group 23 mode on
+
+   - sw3(config)#int range g3/0-1
+
+   - sw3(config-if-range)#channel-group 23 mode on
+   - s3(config-if-range)#do show etherch 23 sum
+   #+end_src
+   #+DOWNLOADED: screenshot @ 2020-11-27 00:14:31
+   [[file:_assets/2020-11-27_00-14-31_screenshot.png]]
+ 
+** +Configure the etherchannel between SW1 and SW2 to use destination MAC address load-balancing.+ Cài eth channel giữa sw1 và sw2, và dùng destination mac address load-balancing
+#+begin_example
+- Note: load-balancing là quá trình lựa chọn link trên port nào để xử lý dòng dữ liệu. Nghĩa là khi ta gộp 4 link lại với nhau,nếu  có dòng chảy traffic từ A->B không có nghĩa là sẽ chia đều 4 link 25 % traffic(vì như thế sẽ dẫn tới loop nếu có traffic ở chiều ngược lại). Mà sẽ chọn ra một link đại diện. Và link này sẽ được xác định bằng thuật toán. Ở đây thuật toán ~dst-mac~ chọn bit cuối cùng của mac address.
+  - Ví dụ với nếu nếu dòng traffic từ ~0c.5a.95.f7.cc.05~ tới ~0c.5a.95.7e.ab.04~ thì 04 ~ 00000100 vậy 0 là bit cuối cùng ta chọn link tương ứng với cổng đánh số 0
+#+end_example
+    Câu lệnh để điều chỉnh thì chỉ đơn giản như bên dưới, lưu ý phải cài trên cả 2 đầu
+     #+begin_src python
+     - sw1(config)#port-channel load-balance dst-mac
+
+     - sw2(config)#port-channel load-balance dst-mac
+     #+end_src
+Kiểm tra lại bằng câu lệnh ~show etherchannel load~
+#+DOWNLOADED: screenshot @ 2020-11-27 00:18:43
+[[file:_assets/2020-11-27_00-18-43_screenshot.png]]
+
+
+

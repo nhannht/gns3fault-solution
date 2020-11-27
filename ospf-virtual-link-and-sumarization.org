@@ -1,0 +1,76 @@
+#+TITLE:OSPF Virtual link and summarization 
+
+[[file:_assets/2020-11-26_23-39-00_screenshot.png]]
+** +The Company you are currently working for has recently bought a smaller organization and now needs to connect the 2 networks together. Company policy specifies that only OSPF can be used as a routing protocol and it’s physically impossible to connect the Louie router to the Huey router. Up to you to find a good solution…!+ Công ty bạn đang làm việc vừa mua lại một tổ chứ nhỏ hơn và cần phải kết nối 2 mạng lưới lại với nhau. Chính sách của công ty yêu cầu rằng OSPF cần phải được dùng là giao thức định tuyến và về mặt vật lý là bất khả thi để kết nối Louie và Huey. Đây là lúc bạn thể hiện tài năng của mình
+   #+begin_example
+   Note: OSPF là giao thức định tuyến theo chuẩn mở rất phổ biến trong các mạng lớn, không như giao thức rip hoạt động bằng cách trao đổi bảng định tuyến giữa các neighbor và tính metric dựa trên hop. OSPF chỉ trao đổi thông tin về các link. ospf tính metric dựa trên bandwich và ưu tiên đường đi nào có bandwhich lớn nhất. 
+   #+end_example
+** Config ip như trong hình 
+   #+begin_src python
+   - huey(config)#int lo 0
+   - huey(config-if)# ip addr 1.1.1.1 255.255.255.0
+   - huey(config-if)#int f0/0
+   - huey(config-if)#ip addr 192.168.12.1 255.255.255.0
+   - Tương tự với các router còn lại
+   #+end_src
+
+     
+** +Configure OSPF on all routers, configure the areas as specified in the topology picture.+ Cài đặt ospf cho mọi router với các khu vực như trong hình
+   
+      #+begin_src python
+
+        - huey(config)#router ospf 1
+        - huey(config-router)#network addr 1.1.1.1 0.0.0.255 area 0
+        - huey(config-router)#network 192.168.12.0 0.0.0.255 area 1
+        - dewey(config)#router ospf 1
+        - dewey(config-router)#network 192.168.12.0 area 1
+        - dewey(config-router)#network 192.168.23.0 area 2
+        - louei(config-router)#network 192.168.23.0 area 2
+      #+end_src
+        
+** Area 2 has no direct connection to Area 0, solve this by using OSPF commands. Khu vực 2 không được kết nối trực tiếp tới khu vực 0, giải quyết chúng bằng lệnh thuộc ospf . Ensure you have full reachability. Đảm bảo rằng bạn full kết nối
+   - Note: theo nguyên tắc mọi ospf area phải kết nối với backbond area 0, nhưng ở đây louie không kết nối trực tiếp được nên ta dùng virtualink với area 1 là trung gian. Ta tạo thêm loopback int 2 trên dewey để đảm bảo sự ổn định khi dùng virtual link
+      #+begin_src python
+        - Dewey(config)#int lo 2
+        - Dewey(config-if)#ip addr 2.2.2.2 255.255.255. 0
+
+        - Huey(config-router)#area 1 virtual-link 2.2.2.2
+
+        - dewey(config-router)#area 1 virtual-link 1.1.1.1
+      #+end_src
+Kiểm tra ping từ louie tới huey
+#+DOWNLOADED: screenshot @ 2020-11-27 23:05:57
+[[file:_assets/2020-11-27_23-05-57_screenshot.png]]
+
+
+#+DOWNLOADED: screenshot @ 2020-11-26 23:25:44
+[[file:_assets/2020-11-26_23-25-44_screenshot.png]]
+
+    
+** +Create some extra loopbacks on router Louie and advertise them in area 2:+ Tạo thêm một số loopback interface cho router louie và quảng bá chúng trên area2 +Make sure router Huey only sees 172.16.0.0/22 in it’s routing table, you are only allowed to make changes to router Dewey.+ Đảm bảo rằng huey chỉ nhìn thấy 172.16.0.0/22 trên bảng định tuyến của nó, nhưng bạn chỉ được phép tinh chỉnh trên router Dewey
+    #+begin_example
+    - Loopback0: 172.16.0.1 /24
+    - Loopback1: 172.16.1.1 /24
+    - Loopback2: 172.16.2.1 /24
+    - Loopback3: 172.16.3.1 /24
+    #+end_example
+
+      #+begin_src python
+      - louie(config-if)#int loop 10                     
+      - louie(config-if)#ip addr 172.16.2.0 255.255.255.0
+
+      - louie(config-if)#int loop 11                     
+      - louie(config-if)#ip addr 172.16.2.1 255.255.255.0
+
+      - louie(config-if)#int loop 12                     
+      - louie(config-if)#ip addr 172.16.2.2 255.255.255.0
+      - louie(config-if)#int lo 13                       
+      - louie(config-if)#ip addr 172.16.2.3 255.255.255.0
+
+#summarize trên dewie và kết quả routing table trên huey.      - dewie(config-router)#area 2 range 172.16.0.0 255.255.255.252
+      #+end_src
+ - Ta thấy dù không chỉnh trực tiếp trên louie nhưng huey vẫn tạo ra được routing table có 172.16.0.0/22 được summarize
+
+ #+DOWNLOADED: screenshot @ 2020-11-26 23:38:38
+ [[file:_assets/2020-11-26_23-38-38_screenshot.png]]
+

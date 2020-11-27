@@ -1,0 +1,210 @@
+* RIP-ADVANCE
+https://gns3vault.com/rip/rip-advanced
+#+DOWNLOADED: screenshot @ 2020-11-26 08:51:42
+[[file:_assets/2020-11-26_08-51-42_screenshot.png]]
+Kịch bản:
+
++You are a freelance network engineer and one of your customers has an old network based on the RIP routing protocol. This networks needs some tuning so it’s time to use some more advanced RIP tricks.+
+
+Bạn là một kỹ sư mạng tự do và một trong những khách hàng của bạn có một mạng mạng cũ dựa trên giao thức RIP. Mạng này cần phải được điều chỉnh lại và đây là lúc cần những kỹ thuật về định tuyến RIP cao cấp hơn 
+
+Goal:
+
+** Cài đặt địa chỉ ip cho các interface như trong hình
+      
+       #+begin_src ipython
+       + fred(config)#int f1/0
+
+       + fred(config-if)#ip ađr 10.10.13.1 255.255.255.0
+
+       + fred(config-if)#int loopback 1
+
+       + fred(config-if)#ip ađr 1.1.1.1 255.255.255.0
+       #+end_src
+
+       + Tương tự với 4 router còn lại
+
+       + Hình minh họa trên cho câu lệnh show ip int br
+         #+DOWNLOADED: screenshot @ 2020-11-26 09:18:32
+ [[file:_assets/2020-11-26_09-18-32_screenshot.png]]
+
+      
+** +Configure RIP version 2 on all routers, make sure it does no summarization by itself.+ Cài đặt định tuyến version 2 cho tất cả router, đảm bảo chúng không tự tổng kết
+** +Advertise all networks in RIP, including the loopback interfaces. Achieve full connectivity.+ Quảng bá tất cả các network trên RIP, bao gồm cả loopback interface
+      + Dùng các câu lệnh trên các router từ mode global config:
+      #+begin_src python
+        fred(config)# router rip
+        #quảng cá các mạng bao gồm lo
+        fred(config-router)# network 10.10.13.0 255.255.255.0
+        fred(config-router)# network 10.10.12.0 255.255.255.0
+        fred(config-router)# network 0.0.0.0 255.255.255.0
+        # Tắt auto summarize
+        fred(config-router)# no autosummarize
+        # version 2 của RIP
+        fred(config-router)# version 2
+      #+end_src
+      - Tương tự với 3 router còn lại
+
+      #+begin_quote
+      - Note: RIP là giao thức định tuyến tự động dựa trên số hop, tức là số device trên các đường đi. Đường đi nào có số hop ngắn nhất sẽ được ưu tiên trước. RIP sẽ gửi bảng định tuyến tới các router neigbor theo định kỳ, nên có xu hướng tốn tài nguyên hơn so với EIGRP, tuy nhiên nó là giao thức chuẩn nên có thể dùng trên nhiều router của các hãng khác nhau 
+
+      - Version 2 của RIP hỗ trợ mã hoá khi truyền bảng định tuyến, autosummarize, VIDR,VLSM
+
+      - Autosumarize là tự động thu gọn bảng định tuyến
+      #+end_quote
+
+      - Dùng câu lệnh ~show ip route~ trên barney
+        
+   #+DOWNLOADED: screenshot @ 2020-11-26 09:39:18
+ [[file:_assets/2020-11-26_09-39-18_screenshot.png]]
+ 
+** After using a debug on Router Fred, you notice that RIP is sending updates towards the loopback interfaces. Disable this.
+      + Dùng lệnh ~debug ip rip~ trên Fred
+        Dòng ~RIP: sending v2 update ... via loopback1(...)~ 
+        #+DOWNLOADED: screenshot @ 2020-11-26 09:56:36
+        [[file:_assets/2020-11-26_09-56-36_screenshot.png]]
+      + Dùng  ~passive-interface loopback~ 1
+      Dòng ~RIP: sending v2 update ... via FastEthernet(...)~ là kết quả
+        #+DOWNLOADED: screenshot @ 2020-11-26 09:58:09
+ [[file:_assets/2020-11-26_09-58-09_screenshot.png]]
+
+** +The link between Router Wilma and Betty is not allowed to send RIP traffic by using broadcast or multicast.+ Kết nối giữa Router Wilma và Betty không cho phép gửi tín hiệu RIP sử dụng multicast/broadcast.
+   - Fred# debug ip rip   
+   Ta thấy message trong rip gửi tới  multicast addrest ip của Wilma, điều này đúng với rip trên cả 4 router. Ở đây ta chỉ disable multicast và broadcast giữa wilma và betty
+#+DOWNLOADED: screenshot @ 2020-11-27 10:19:39
+[[file:_assets/2020-11-27_10-19-39_screenshot.png]]
+    - Bằng các chỉ định trực tiếp địa chỉ neighbor của wilma và betty(để chuyển sang unicast ), đồng thời chỉnh 2 int serial sang passive(tắt multicast/broadcast).
+      
+      #+begin_src  ipython
+        Wilma(config-router)# neighbor 10.10.24.4
+
+        Wilma(config-router)# passive-interface s1/0
+        Fred(config-router)#neighnor 10.10.24.3
+        Fred(config-router)#passive-interface s1/0
+        Wilma# debug ip rip 
+      #+end_src
+#+DOWNLOADED: screenshot @ 2020-11-26 10:13:23
+    -Check lại bằng ~debug ip rip~ trên wilma
+[[file:_assets/2020-11-26_10-13-23_screenshot.png]]
+
+** +When you start a ping from Router Wilma to 4.4.4.4 you notice the traffic is being sent down the slow serial-link, change the RIP configuration on Router Betty so the Fast Ethernet links will be used. You are not allowed to shutdown the serial link.+ Khi bạn ping từ Wilma tới 4.4.4.4 sẽ thấy tín hiệu được gửi thông qua link serial vốn chậm hơn so với fastEthernet. Bạn hãy điều chỉnh RIP sau cho đường truyền thông qua fe. Bạn không được tắt serial link đi. 
+   - Vì thuật toán của RIP chỉ dựa trên số hop, nên nó sẽ tự động chọn link serial vì sẽ dẫn trực tiếp tới 4.4.4.4, tức loopback của betty
+      + Wilma# ~traceroute 4.4.4.4~
+        #+DOWNLOADED: screenshot @ 2020-11-26 10:17:22
+[[file:_assets/2020-11-26_10-17-22_screenshot.png]]
+      + Ta tạo standard ACL ngắm vào các traffic có nguồn từ ip 4.4.4.4
+
+      + Sao đó ta tạo offset list theo chiều in trên int se1/0. Dưạ trên bảng địa giá trị của RIP
+
+      | 2 địa chỉ ip kề nhau        | 0 metric          |
+      | mối hop đứng giữa           | + 1 metric        |
+      | 1 địa chỉ không thể với tới | maximum 16 metric |
+      + Ta thấy metric Wil-Fre-Bar-Betty = 2 metric, vậy ta chọn 1 con số lớn hơn (5) và sẽ khiến RIP ưu tiên chọn con đường có số metric nhỏ hơn(offset == metric) bằng cách dùng offset-list. Câu lệnh dùng để điều chỉnh metric trên một access list. 
+
+        #+begin_src ipython
+
+        + wilma(config)# access-list 1 permit 4.4.4.0 0.0.0.255
+        + wilma(config-router)# offset-list 1 in 5 serial 1/0
+        #+end_src
+
+ #+DOWNLOADED: screenshot @ 2020-11-26 10:41:26
+ [[file:_assets/2020-11-26_10-41-26_screenshot.png]]
+    + Check lại bằng ~traceroute~
+#+DOWNLOADED: screenshot @ 2020-11-26 10:49:19
+[[file:_assets/2020-11-26_10-49-19_screenshot.png]]
+
+** +Create a new loopback10 interface on router Betty, use IP address 44.44.44.44 /24+ Tạo loopback int trên router betty sử dụng addr 44.44.44.44 /24
+      #+begin_src ipython
+      + betty(config)# int loop 10
+      + betty(config-if)# ip addr 44.44.44.44 255.255.255.0
+      #+end_src
+
+        
+** +Change the configuration on Router Fred so pings to 44.44.44.44 will be sent only through the serial link, not through the link towards Barney.+ Cài đặt Fred chỉ ping tới 44.44.44.44 thông qua serial link
+   - Ta dùng distribute list áp lên int f0/1 của fred một ACL-chặn mọi traffic từ 44.44.44.44 và cho phép các giao thức còn lại. Như vậy đảm bảo tín hiệu ping từ fred tới 44.44.44.44 tới các ip khác trên topo sẽ thông qua int se
+              #+DOWNLOADED: screenshot @ 2020-11-26 11:05:01
+      #+begin_src ipython
+      + fred(config)# access-list 1 deny 44.44.44.44 0.0.0.255
+      + fred(config)# access-list 1 permit all
+      + fred(config-router)#distribute-list 1 in f0/1
+      #+end_src
+
+[[file:_assets/2020-11-26_11-05-01_screenshot.png]]
+** +Change the configuration on Router Wilma and Betty so only triggered updates are sent on the serial link.+ Điều chỉnh trên Wilma và Bitty sao cho update RIP chỉ thông qua se
+   - Dùng lệnh ~ip rip trigger~ trên 2 int serial của 2 router 
+      #+begin_src ipython
+      - betty(config)#int s1/0
+      - betty(config-if)#ip rip triggered 
+      - wilma(config)#int s1/0
+      - wilma(config-if)#ip rip triggered
+      #+end_src
+
+
+** +Configure Router Wilma so RIP V1 updates are sent towards Fred. You are not allowed to change the RIP version on Fred.+ Điều chỉnh trên Wilma sao cho update từ RIP v1 tới Fred. Không được phé thay đổi RIP version trên Fred 
+   - Nếu không được sửa version thì ta sẽ gửi cả 2 loại tín hiệu thuộc 2 version khác nhau(rip cho phép gửi cả 2 version cùng lúc). Ta thực hiện với câu lệnh sau:
+      #+begin_src python
+      - wilma(config-if)#int f0/0               
+
+      - wilma(config-if)#ip rip send
+      - wilma(config-if)#ip rip send version 1 2
+
+      - fred(config)#int f0/0
+      - fred(config-if)#ip rip receive version 1 2
+      #+end_src
+
+** +Configure authentication between Router Barney and Betty:+ Cài đặt mã hoá giữa Barney và Betty.
+      + key-chain: VAULT
+      + key-id: 1
+      + key-string: FREE
+
+      #+begin_src ipython
+      - barney(config)#key chain vault
+      - barney(config-keychain)#key 1  
+
+      - barney(config-keychain-key)#key-string free
+      - barney(config-keychain-key)#int f0/0
+      - barney(config-if)#ip rip authentication mode md5
+      - barney(config-if)#ip rip authentication key     
+      - barney(config-if)#ip rip authentication key-chain vault
+
+      - betty(config)#key chain vault
+      - betty(config-keychain)#key 1  
+
+      - betty(config-keychain-key)#key-string free
+      - betty(config-keychain-key)#int f0/0
+      - betty(config-if)#ip rip authentication mode md5
+      - betty(config-if)#ip rip authentication key     
+      - betty(config-if)#ip rip authentication key-chain vault
+      #+end_src
+
+    - barney# ~debug ip rip~
+      #+DOWNLOADED: screenshot @ 2020-11-26 11:36:11
+ [[file:_assets/2020-11-26_11-36-11_screenshot.png]]
+
+
+** +Create 4 loopback interfaces on router Betty+: Tạo 4 lo int trên Betty
+      - Loopback1: 172.16.0.1 /24
+      - Loopback2: 172.16.1.1 /24
+      - Loopback3: 172.16.2.1 /24
+      - Loopback4: 172.16.3.1 /24
+** +Configure a summary on Router Barney so Router Fred will have a 172.16.0.0/22 entry in it’s routing table+. Cài đặt summảy trên Barney để Fred có 172.16.0.0 trong bảng định tuyến
+   Trước khi summarize trên bảng định tuyến của Berney
+#+DOWNLOADED: screenshot @ 2020-11-27 11:30:56
+[[file:_assets/2020-11-27_11-30-56_screenshot.png]]
+
+        
+      #+begin_src ipython
+      - barney(config-if)#int f0/1
+      - barney(config-if)#ip summary-address 172.16.0.0 255.255.252.0
+      - fred(config-if)#int f0/1
+      - fred(config-if)#ip rip receive version 1 2
+      #+end_src
+      - Khi ta summarize trên Barney routing table thì routing table của Fred cuxng thay đổi vì cơ chế hoạt động của RIP là gửi bảng định tuyến tới các neighbor
+       - Trên Fred routing table(có thể dùng ~clear ip rout *~ để dọn những refresh bảng routing )
+
+#+DOWNLOADED: screenshot @ 2020-11-27 11:36:05
+[[file:_assets/2020-11-27_11-36-05_screenshot.png]]
+
+** Topo sau khi hoàn thành
+#+DOWNLOADED: screenshot @ 2020-11-27 08:38:42
+[[file:_assets/2020-11-27_08-38-42_screenshot.png]]

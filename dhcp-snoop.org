@@ -1,0 +1,104 @@
+https://gns3vault.com/switching/dhcp-snooping
+* DHCP SNOOPING
+
+** Tình huống:
+   - Một trong những khác hàng của bạn bị tấn công trong hệ thống hạ tầng switch của họ. Bạn là một chuyên gia về switch và phải tìm kiếm một phương pháp để chặn kiểu tấn công DHCP spoofing. Hãy thể hiện kỹ năng của bạn nào
+   - +One of your customers is being plagued by attacks on their switched infrastructure. You as a specialized switch specialist are looking for a method to counter DHCP spoofing attacks. Let’s see what you can do for them…+
+
+** Configure the IP addresses on router Attacker and DHCP as specified in the topology picture.
+#+DOWNLOADED: screenshot @ 2020-11-25 21:01:55
+[[file:_assets/2020-11-25_21-01-55_screenshot.png]]
+     #+begin_src python
+     - attacker(config)#int f0/0
+     - attacker(Config-if)#ip addr 192.168.123.253 255.255.255.0
+     - dhcp(config)#int f0/0
+     - dhcp(Config-if)#ip addr 192.168.123.254 255.255.255.0
+     #+end_src
+** Configure DHCP server on router DHCP so it can serve the client an IP address.
+      #+begin_src python
+      - dhcp(config-if)#ip dhcp pool  DHCP-POOL
+      - dhcp(dhcp-config)#network 192.168.123.0 255.255.255.0
+      - client(config)#int f0/0
+      - client(config-if)#ip addr dhcp
+      #+end_src
+        #+DOWNLOADED: screenshot @ 2020-11-27 01:01:05
+        [[file:_assets/2020-11-27_01-01-05_screenshot.png]]
+** Mô phỏng DHCP spoof từ attacker    
+   Cài đặt dhcp server trên attacker với cùng 1 dãy addr pool của dhcp server
+    - tắt int của dhcp server để chặn tín hiệu dhcp từ server
+    - dhcp(config-if)# ~shut~
+[[file:_assets/2020-11-27_01-05-32_screenshot.png]]
+       #+begin_src python
+         - attacker(config-if)#ip dhcp pool ATTACKER-POOL
+         - attacker(dhcp-config)#network 192.168.123.0 255.255.255.0
+         # Client yêu cầu địa chỉ ip mới từ dhcp server.
+         - client(config-if)# shut    
+         - client(config-if)# no shut
+         - client(config-if)# ip dhcp
+
+       #+end_src
+
+- Ta thấy client không thể phân biệt được nó đã nhận ip mới từ nguồn nào, ở đây nó nhận địa chỉ ip từ attacker. Và có nghĩa là attacker có thể đánh lừa client rằng nó cũng là một DNS hay một default gateway. Từ đó nó có thể ~intercept traffic~
+ [[file:_assets/2020-11-27_01-07-50_screenshot.png]]
+#+DOWNLOADED: screenshot @ 2020-11-27 01:08:19
+[[file:_assets/2020-11-27_01-08-19_screenshot.png]]
+** +Configure DHCP snooping globally on SW1.+ Cài đặt DHCP snooping  toàn topo trên SW1
+ Note: DHCP snooping là kỹ thuật chặn dhcp spoofing , switch sẽ xây dựng database về các cổng nào ~trust~ hay ~untrust~ và chỉ cho phép packet ~dhcp offer~  từ các dhcp server đi qua các cổng trust. Đồng thời nó cũng lưu lại địa chỉ mac của máy nào đã được cấp dhcp. Cũng như ta có thể debug để nhận biết các tín hiệu dhcp nào đã đi qua switch 
+    #+begin_src python
+      # dòng lệnh này để tắt việc chèn option 82 vào các dhcp DISCOVER packet từ dhcp client đi qua nó. Chúng ta không đi sâu vào đây, nhưng nói một cách dễ hiểu, nếu không tắt đi thì sẽ dẫn đến những hành vi không mong muốn (unexpected behaviour) trên dhcp server và nó sẽ không trả về ip theo yeu cầu của client
+      sw1(connfig)#no ip dhcp snooping information option
+      # áp dhcp snooping lên vlan 1 là vlan mặc định của toàn topo
+      sw1(config)#ip dhcp snooping vlan 1
+      # bật dhcp snooping trên switch, mặc định dhcp snooping luôn disable
+      sw1(config)#ip dhcp snooping
+
+    #+end_src
+
+        
+
+** Configure SW1 to use the correct trusted and untrusted interfaces.
+      #+begin_src python
+        - sw1(config)#int e0/2
+# Đặt int nối với dhcp thật ~trust~, mặt định tất cả các cổng đều sẽ untrust
+        - sw1(config-if)#ip dhcp snooping trust 
+      #+end_src
+** Configure SW1 so the client is limited to 10 DHCP packets per second.
+      #+begin_src python
+        - sw1(config-if)#int fa0/13
+# đặt cổng nối với client giới hạn dhcp packet là 10
+        - sw1(config-if)#ip dhcp snooping limit rate 10
+      #+end_src
+
+      - Kiểm tra lại xem dhcp có được bật hay chưa
+     #+DOWNLOADED: screenshot @ 2020-11-27 01:22:45
+ [[file:_assets/2020-11-27_01-22-45_screenshot.png]]
+Kiểm tra database của switch về ip nào đã cấp phát và hiện đang nằm ở client nào
+#+DOWNLOADED: screenshot @ 2020-11-27 01:24:57
+[[file:_assets/2020-11-27_01-24-57_screenshot.png]]
+ 
+** +Configure router Attacker as a DHCP server to verify your DHCP snooping configuration.+ Kiểm tra xem dhcp snooping của bạn có hoạt động không
+
+   Dùng ba lệnh debug 
+      #+begin_src python
+      - sw1#debug ip dhcp snooping packet
+      - sw1#debug ip dhcp snooping agent
+      - sw1#debug ip dhcp snooping event
+      #+end_src
+        
+- Ta tắt int cấp phát dhcp trên server thật đi
+      - dhcp(config-if)#shut
+      - Ta thấy nếu ta yêu cầu địa chỉ mới từ client thì trên switch debug dhcp snooping sẽ cho ra dòng get ~invalid mat entry~
+#+DOWNLOADED: screenshot @ 2020-11-27 01:48:53
+[[file:_assets/2020-11-27_01-48-53_screenshot.png]]
+ Và ta kiểm tra trên attacker nó cũng thất bại trong việc gửi ip xuống client dù nó là dhcp server duy nhất trên topo và nó vẫn kết nối được với client
+#+DOWNLOADED: screenshot @ 2020-11-27 01:53:34
+[[file:_assets/2020-11-27_01-53-34_screenshot.png]]
+- Bật dhcp trên int của server
+     - dhcp(config-if)#no shut   
+- Ta thấy dhcp server cấp phát dhcp thành công mà không gặp trở ngàji gì
+#+DOWNLOADED: screenshot @ 2020-11-27 01:50:51
+[[file:_assets/2020-11-27_01-50-51_screenshot.png]]
+
+** Topo sau của nhóm:
+#+DOWNLOADED: screenshot @ 2020-11-27 12:40:05
+[[file:_assets/2020-11-27_12-40-05_screenshot.png]]
