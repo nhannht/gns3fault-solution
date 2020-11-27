@@ -1,5 +1,5 @@
 https://gns3vault.com/switching/dhcp-snooping
-* DHCP SNOOPING
+#+TITLE: DHCP SNOOPING
 
 ** Tình huống:
    - Một trong những khác hàng của bạn bị tấn công trong hệ thống hạ tầng switch của họ. Bạn là một chuyên gia về switch và phải tìm kiếm một phương pháp để chặn kiểu tấn công DHCP spoofing. Hãy thể hiện kỹ năng của bạn nào

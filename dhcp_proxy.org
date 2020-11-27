@@ -1,11 +1,11 @@
 #+TITLE:DHCP Proxy
 
 [[file:_assets/2020-11-27_22-11-25_screenshot.png]]
-You used to have a DHCP server for each VLAN but this wasn’t much of a scalable solution. You decide to get rid of all the DHCP servers and install a single DHCP server in the datacenter. You see that the clients are sending DHCP discover messages but they are not reaching the DHCP server, some of your routers are using serial links with PPP so you want to make sure they can get IP addresses as well. Bạn từng có một DHCP server cho mỗi VLAN nhưng nó không phải là giải pháp tối ưu. Bạn quyết định phải bỏ hết các DHCP server thừa đi và chỉ dùng 1 DHCP server duy nhất trong trung tâm dữ liệu. Bạn thấy rằng các clients này đã gửi tín hiệu yêu cầu DHCP(DHCP discover message )nhưng nó đã không tới được DHCP server, vài router khác của bạn dùng serial links với PPP và bạn muốn chắc rằng chúng có thể nhận đuợc địa chỉ IP từ DHCP. 
+** +You used to have a DHCP server for each VLAN but this wasn’t much of a scalable solution. You decide to get rid of all the DHCP servers and install a single DHCP server in the datacenter. You see that the clients are sending DHCP discover messages but they are not reaching the DHCP server, some of your routers are using serial links with PPP so you want to make sure they can get IP addresses as well.+ Bạn từng có một DHCP server cho mỗi VLAN nhưng nó không phải là giải pháp tối ưu. Bạn quyết định phải bỏ hết các DHCP server thừa đi và chỉ dùng 1 DHCP server duy nhất trong trung tâm dữ liệu. Bạn thấy rằng các clients này đã gửi tín hiệu yêu cầu DHCP(DHCP discover message )nhưng nó đã không tới được DHCP server, vài router khác của bạn dùng serial links với PPP và bạn muốn chắc rằng chúng có thể nhận đuợc địa chỉ IP từ DHCP. 
 
 
-- Note: chủ đề của bài này là DHCP proxy, DHCP proxy chỉ một router đứng giữa dhcp client và dhcp server, nó nhận yêu cầu dhcp discover và dhcp request từ client, lưu trong database của nó, dùng chính địa chỉ ip của nó gửi dhcp request tới dhcp server, sau khi nhận ip nó sẽ lại gửi cho client. Ưu điểm của dhcp proxy là nó sẽ hạn chế việc truy cập trực tiếp từ client tới server, cũng như bản thân nó bảo quản mac address và ip binding tương ứng của clients trong database. Nhờ đó ngăn chặn được một số hình thức tấn công
-  - Các yêu cầu 
+ - Note: chủ đề của bài này là DHCP proxy, DHCP proxy chỉ một router đứng giữa dhcp client và dhcp server, nó nhận yêu cầu dhcp discover và dhcp request từ client, lưu trong database của nó, dùng chính địa chỉ ip của nó gửi dhcp request tới dhcp server, sau khi nhận ip nó sẽ lại gửi cho client. Ưu điểm của dhcp proxy là nó sẽ hạn chế việc truy cập trực tiếp từ client tới server, cũng như bản thân nó bảo quản mac address và ip binding tương ứng của clients trong database. Nhờ đó ngăn chặn được một số hình thức tấn công
+   - Các yêu cầu 
 ** Config ip như trong hình
      #+begin_src python
      - erik(config)#int s2/0
@@ -13,7 +13,7 @@ You used to have a DHCP server for each VLAN but this wasn’t much of a scalabl
      #+end_src
      - Tương tự với các router còn lại
 
-** Configure router Erik and Jack for PPP encapsulation. Config router erik và jack để chúng dùng phương thức gói dữ liệu PPP
+** +Configure router Erik and Jack for PPP encapsulation.+ Config router erik và jack để chúng dùng phương thức gói dữ liệu PPP
 - Note: PPP là một giao thức kết nối p2p cho serial connection. Nó cung cấp các tính năng PPP framing(Encapsualtion), LCP(link control protocol - giao thức quản lý kết nối gồm mã hoá (PAP và CHAP), compression(nén dữ liệu),phát hiện looped link,kết hợp nhiều link và call back), và NCP(network control protocol)
 #+begin_src python
   erik(config)#int s2/0
@@ -28,7 +28,7 @@ Kiểm tra s2/0 trên erik đã dùng giao thức đóng gói ppp chưa
 #+DOWNLOADED: screenshot @ 2020-11-27 21:37:26
 [[file:_assets/2020-11-27_21-37-26_screenshot.png]]
 
-** Configure router Erik so it requests an IP address through IPCP. Cài đặt routter Erik để chúng yêu cầu điạ chỉ IP thông qua IPCP
+** +Configure router Erik so it requests an IP address through IPCP.+ Cài đặt routter Erik để chúng yêu cầu điạ chỉ IP thông qua IPCP
    - Note:IPCP nghĩa là Internet protocol control protocol, là giao thức điều khiển internet protocol dưa trên p2p protocol(ở đây là ppp). Giao thức này điều khiển thông qua lệnh ~peer~ trên 1 trong 2 endpoints interface. Mà ở đây jack, đóng vai trò là dhcp proxy. 
 
 #+begin_src python
@@ -38,7 +38,7 @@ Kiểm tra s2/0 trên erik đã dùng giao thức đóng gói ppp chưa
     jack(config)#ip dhcp-server 192.168.23.3
 #+end_src
 
-** Configure router Frank as a DHCP server and ensure it can reach out an IP address to router Erik. Cài đặt Frank như một DHCP server và đảm bảo rằng nó có thể gửi điạ chỉ IP tới cho Erik
+** +Configure router Frank as a DHCP server and ensure it can reach out an IP address to router Erik.+ Cài đặt Frank như một DHCP server và đảm bảo rằng nó có thể gửi điạ chỉ IP tới cho Erik
 #+begin_src python
     frank(config)#int f0/0
     frank(config-if)#ip addr 192.168.23.3 255.255.255.0
