@@ -1,6 +1,56 @@
 #+TITLE:DHCP Proxy
 
 [[file:_assets/2020-11-27_22-11-25_screenshot.png]]
+* Cơ sở lý thuyết:
+** DHCP proxy agent là gì
+#+DOWNLOADED: screenshot @ 2020-11-28 22:06:59
+[[file:_assets/2020-11-28_22-06-59_screenshot.png]]
+ 
+   - A DHCP relay agent simply relays broadcast DHCP packets (DHCP Discover/Request) to DHCP server(s) located in other subnets whenever it receives packets from a DHCP client residing in that same subnet. On the other hand, a DHCP proxy agent not only relays the DHCP packets between subnets, but also acts on behalf of a DHCP server, while also acting as a DHCP client. That is, it acts as a DHCP server to the DHCP client, but as a DHCP client to the DHCP server. Ta nên biết về một khái niệm gần liên quan là DHCP replay agent, nghĩa là một agent giúp lặp lại việc broadcast các gói tin DHCP Discovery/Request từ máy khách tới các DHCP server ở khác subnet. Từ đó ta hiểu rằng DHCP proxy agent là một agent vừa đóng vai trò của relay agent, vừa đóng vai trò của DHCP server. Tức là nó nhận gói tin phân phối DHCP (DHCP ack message) từ server và phân phối tới clients
+     - Ưu điểm:
+     - Because the IP address of a DHCP server is not viewable to users (DHCP clients), the DHCP server is protected from external attacks, such as Denial of Service (DoS), which targets the server (DHCP clients can only see the IP address of the DHCP proxy agent). Vì DHCP client chỉ biết địa chỉ của proxy agent, nó ngăn được các hình thức tấn công từ bên ngoài như DOS. 
+     - Because the DHCP proxy agent keeps a list of all user IP addresses allocated through DHCP messages, it can create an IP-to-MAC binding table based on the information. This allows the agent to block any traffic from unauthorized users whose IP addresses have not been allocated through DHCP procedures (i.e. static IP users) (Refer to Chapter IV: DHCP security function). Actually, we, “Netmanias”, have once applied such security function to a network operated by one of our customers (a Dutch telecom operator) when we provided the System Integration (SI) services. Vì proxy chưa thông tin về dữ liệu của IP và MAC của client mà nó từng phấn phối IP, nên nó ngăn chặn được các hình thức tấn công từ những nguồn không đáng tin như dhcp spoofing
+
+#+DOWNLOADED: screenshot @ 2020-11-28 21:26:34
+[[file:_assets/2020-11-28_21-26-34_screenshot.png]]
+** Cách hoạt động của DHCP proxy agent:
+#+DOWNLOADED: screenshot @ 2020-11-28 21:28:21
+[[file:_assets/2020-11-28_21-28-21_screenshot.png]]
+*** IP Address Allocation/Lease Procedure Thủ tục phân phối/giải phóng địa chỉ ip
+    The DHCP proxy agent receives DHCP Discover and Request messages broadcasted by the PC and then unicasts the DHCP messages directly to the DHCP server. At this point, the DHCP proxy agent enters its own IP address (the interface address at which DHCP Discover/Request messages are received) into the “Relay Agent IP1 (=Gateway IP=giaddr)” field in the DHCP message. DHCP proxy agent nhận gói tin DHCP discover và DHCP request từ các máy khách , sau đó unicast các gói tin này trực tiếp tới DHCP server. Tại thời điểm này DHCP proxy agent sẽ nhúng điạ chỉ IP của chính nó và vùng "Replay Agent IP1" trong tin hiệu mà nó gửi tới server. DHCP server nếu nhận được gói tin này, sẽ trả lời lại proxy
+#+DOWNLOADED: screenshot @ 2020-11-28 21:59:42
+[[file:_assets/2020-11-28_21-59-42_screenshot.png]]
+
+    When the DHCP server unicasts a DHCP Offer/Ack message, it includes the relay agent’s IP address in the “destination IP address field” of the message, and then it sends the message on to the DHCP proxy agent. After checking the “Broadcast Flag” value of the received message, the DHCP proxy agent replaces the destination IP address with the PC IP address (Broadcast Flag=0) or the broadcast IP address (Broadcast Flag=1) depending on the value of the Broadcast Flag field [2], and the source IP with the DHCP proxy agent IP address. Finally, it forwards the modified message on to the PC. Khi mà server unicast các gói tin DHCP offer/ack, nó sẽ nhúng kèm địa chỉ của relay agent vào vùng "địa chỉ đích" của các gói tin này. Về phần proxy, sau khi kiểm tra cờ "Broadcast Flag" của các gói tin mà nó nhận, sẽ thay thế địa chỉ đíjch với địa chỉ của PC hoặc địa chỉ của broadcast phụ thuộc vào giá trị của broadcast flag. Sau cùng, nó sẽ chuyển tiếp các gói tin mà nó đã điều chỉnh tơi các máy khách
+
+Up to this point, the procedure is similar to that of the DHCP relay agent described in [3]. The important difference between a DHCP proxy agent and a DHCP relay agent is that the former replaces a DHCP server IP with the IP address of the concerned DHCP proxy agent in the DHCP Server Identifier (Option 54) field included in the DHCP Offer/Ack message. Through this process, the DHCP proxy agent is recognized as a DHCP server by the PC (DHCP client).
+
+
+#+DOWNLOADED: screenshot @ 2020-11-28 22:00:26
+[[file:_assets/2020-11-28_22-00-26_screenshot.png]]
+
+*** IP Address Renewal Procedure Thủ tục làm mới địa chỉ
+    According to the reference “Understanding the Basic Operations of DHCP” [1], a DHCP client (PC) keeps/stores a DHCP server IP address acquired through a DHCP Ack message (in the DHCP Server Identifier field) during the IP address allocation procedure. Then, when the DHCP client needs to extend an IP address lease time, it does NOT broadcast, but unicasts a DHCP Request message to the DHCP server. As shown in Figure 5, the DHCP server IP address known to the DHCP client is the uplink IP address of the DHCP proxy agent. So the message is unicasted to the DHCP proxy agent, which then re-processes and forwards the message to the DHCP server. máy khách của DHCP sẽ lưu lại địa chỉ của DHCP server mà nó đã nhận được từ các gói tin Ack. Sau đó, khi máy khác cần mở rộng thời gian lưu giữ địa chỉ IP của nó, nó sẽ không broadcast, mà dùng unicast gửi một gói DHCP request tới server. Các máy khách chỉ biết rằng địa chỉ của proxy đứng giữa, nên thực tế các gói tin sẽ gửi tới proxy, sau đó proxy mới điều hướng gói tin tới DHCP server
+
+In respond to the message, the DHCP server unicasts a DHCP Ack message to the DHCP client. The destination IP address used at this point is the relay gent IP address (giaddr) of the DHCP Request message. So this message is forwarded to the DHCP proxy agent, which then re-processes and forwards the message to the DHCP client. Ở phần phản hồi, DHCP server unicast một gói tin DHCP ack tới DHCP client. Và địa chỉ đích được dùng ở thời điểm này cũng là của DHCP proxy agent. Và proxy sẽ điều hướng các gói tin tới các máy khách
+
+#+DOWNLOADED: screenshot @ 2020-11-28 21:59:20
+[[file:_assets/2020-11-28_21-59-20_screenshot.png]]
+
+*** IP Address Release Procedure
+    - In case of IP address release, a DHCP client (PC) unicasts a DHCP Release message to a DHCP server. As shown in Figure 6, the DHCP server IP address known to the DHCP client is the uplink IP address of a DHCP proxy agent. So the message is forwarded to the DHCP proxy agent, which re-processes and forwards the message to the DHCP server. Trong trường hợp của thủ tục giải phóng địa chỉ ip, DHCP client sẽ unicast gói tin DHCP release tới DHCP server, và một lần nữa DHCP proxy agent sẽ đứng giữa nhận các gói tin này,và điều phối tới DHCP server
+
+#+DOWNLOADED: screenshot @ 2020-11-28 21:59:07
+[[file:_assets/2020-11-28_21-59-07_screenshot.png]]
+
+*** Security Functions of DHCP Proxy Agents Tính bảo mật của DHCP proxy agents:
+
+    - a DHCP proxy agent is involved in all the DHCP messages that is exchanged between a DHCP client and server. This chapter covers the security function of a DHCP proxy agent, specifically the procedure for blocking any data traffic from unauthorized users whose IP addresses have not been allocated through a normal DHCP procedure. Figure 7 shows an overview of the DHCP security functions. DHCP proxy agent là kẻ đứng trung gian điều phối tất cả các gói tin DHCP giữa các máy khách và server. Nên nó lưu trữ lại IP và MAC address của các máy khách mà nó đã từng điều phối, cũng như thông tin về DHCP server trong database của nó. Do đó giúp ngăn chặn các hình thức tấn công cố tình can thiệp vào lưu lượng như DHCP spoofing.
+
+#+DOWNLOADED: screenshot @ 2020-11-28 21:58:54
+[[file:_assets/2020-11-28_21-58-54_screenshot.png]]
+ 
+* Thực nghiệm:
 **  Bạn từng có một DHCP server cho mỗi VLAN nhưng nó không phải là giải pháp tối ưu. Bạn quyết định phải bỏ hết các DHCP server thừa đi và chỉ dùng 1 DHCP server duy nhất trong trung tâm dữ liệu. Bạn thấy rằng các clients này đã gửi tín hiệu yêu cầu DHCP(DHCP discover message )nhưng nó đã không tới được DHCP server, vài router khác của bạn dùng serial links với PPP và bạn muốn chắc rằng chúng có thể nhận đuợc địa chỉ IP từ DHCP. 
 
 

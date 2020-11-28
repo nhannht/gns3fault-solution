@@ -1,6 +1,16 @@
 https://gns3vault.com/switching/dhcp-snooping
 #+TITLE: DHCP SNOOPING
+* CƠ SỞ LÝ THUYẾT:
+  - Kẻ tấn công  xây dựng một DHCP server giả và gửi các gói tin DHCP OFFER. Khi DHCP client thực hiện gởi broadcast DHCP DISCOVER, DHCP server giả có thể gửi thông tin trả lời trong gói tin DHCP OFFER. DHCP client thường chọn DHCP  OFFER đầu tiên mà nó nhận được. DHCP client sẽ dùng DHCP server giả làm gateway.
+- Lúc này tất cả luồng dữ liệu gửi ra đều sẽ đi qua gateway giả và kẻ tấn công sẽ thực hiện phân tích và biết được nội dụng của dữ liệu. Sau đó gói được chuyển tiếp đi như  bình thường.
+- DHCP Snooping là một kỹ thuật bảo mật giúp các nhà quản trị mạng có thể sử  dụng để chống lại sự giả mạo DHCP server. DHCP Snooping được bật, các cổng trên switch sẽ phân loại thành cổng tin cậy (trust) và không tin cậy (untrust). 
+- Theo mặc định thì tất cả các cổng trên switch đều là untrusted.
+- Một cổng trên switch ở trạng thái untrust sẽ nhận gói tin DHCP DISCOVER, DHCP REQUEST hay DHCP RELEASE và cổng này thường được kết nối đến các DHCP client.
+- Một cổng trên switch ở trạng thái trust sẽ cho phép nhận DHCP OFFER và cổng này thường được kết nối đến DHCP server. Nếu một DHCP server giả gắn vào cổng untrusted và gửi DHCP OFFER thì switch sẽ loại bỏ gói tin này.
+- Khi được bật trên switch, DHCP Snooping sẽ xây dựng một bảng cơ sở dữ liệu về địa chỉ IP đã cấp, địa chỉ MAC và thông tin cổng mà DHCP client đó thuộc.
 
+* THỰC NGHIỆM:
+  
 ** Tình huống:
    - Một trong những khác hàng của bạn bị tấn công trong hệ thống hạ tầng switch của họ. Bạn là một chuyên gia về switch và phải tìm kiếm một phương pháp để chặn kiểu tấn công DHCP spoofing. Hãy thể hiện kỹ năng của bạn nào
    - 

@@ -1,5 +1,8 @@
 #+TITLE:OSPF Virtual link and summarization 
-
+* CƠ SỞ LÝ THUYẾT:
+- Theo mặc định, OSPF yêu cầu tất cả các area phải được kết nối trực tiếp vào area 0. Tùy thuộc vào mô hình mạng mà điều này có thể không thực hiện được. Nói cách khác do điều kiện thiết kế mà một vài vùng không được kết nối trực tiếp vào vùng 0.
+- Trong trường hợp này cần dùng đến tính năng virtual link. 
+* THỰC NGHIỆM:
 [[file:_assets/2020-11-26_23-39-00_screenshot.png]]
 **  Công ty bạn đang làm việc vừa mua lại một tổ chứ nhỏ hơn và cần phải kết nối 2 mạng lưới lại với nhau. Chính sách của công ty yêu cầu rằng OSPF cần phải được dùng là giao thức định tuyến và về mặt vật lý là bất khả thi để kết nối Louie và Huey. Đây là lúc bạn thể hiện tài năng của mình
    #+begin_example

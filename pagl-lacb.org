@@ -1,12 +1,35 @@
 #+TITLE: PAgP LACP Etherchannel
 [[file:_assets/2020-11-26_23-50-40_screenshot.png]]
+* CƠ SỞ LÝ THUYẾT
+  - EtherChannel là công nghệ cho phép kết hợp các kết nối Ethernet thành một bó (bundle) để tăng băng thông. Mỗi bundle còn được gọi là một kết nối luận lý PortChannel (FastEtherChannel - FEC hay GigabitEtherChannel - GEC). Công nghệ này được xem là một cách đơn giản để tăng băng thông giữa các switch mà không cần phải mua phần cứng mới.
+  - Có hai giao thức dùng để thương lượng trong EtherChannel là:
+    - PAgP (Port Aggregation Protocol – giao thức độc quyền của Cisco).
+    - LACP (Link Aggregation Control Protocol – giao thức chuẩn hóa IEEE 802.3ad).
+  #+DOWNLOADED: screenshot @ 2020-11-28 22:17:55
+  [[file:_assets/2020-11-28_22-17-55_screenshot.png]]
 
+- Ở mode Auto (PAgP)/Passive (LACP) thì chờ thương lượng để lên EtherChannel  bị động.
+- Ở mode Desirable (PAgP)/Active (LACP) thì chủ động thương lượng với switch bên kia để lên EtherChannel.
+
+#+DOWNLOADED: screenshot @ 2020-11-28 22:19:09
+#+CAPTION:những trường hợp không thể thương lượng
+[[file:_assets/2020-11-28_22-19-09_screenshot.png]]
+- Phân phối traffic trong EtherChannel - Load Balancing
+  - Cần chú ý là lưu lượng sẽ được phân phối trên các kết nối riêng lẽ bên trong EtherChannel. Nếu một kết nối bên trong một bundle là ưu tiên hơn do kết quả của thuật toán phân phối tải của EtherChannel, kết nối thành viên này sẽ không mang lưu lượng theo một tỉ lệ tương ứng. Nói cách khác, tải không phải luôn luôn phân phối đều giữa các kết nối thành phần. Traffic không phải lúc nào cũng được phân bố đồng đều qua các đường link thuộc EtherChannel, mà nó phụ thuộc vào phương pháp load balancing mà switch sử dụng và mẫu traffic trong mạng.
+  - Switch lựa chọn đường liên kết trong EtherChannel để forward frame dựa vào kết quả của thuật toán hash. Thuật toán có thể sử dụng source IP, destination IP (hoặc cả hai), source MAC, destination MAC (hoặc cả hai), TCP/UDP port number. Thuật toán hash sẽ cho ra một chuỗi số nhị phân (0 & 1).
+  - Nếu chỉ có source hoặc destination được hash (IP, MAC, port number) thì switch sẽ sử dụng một hoặc nhiều low-oder bits của giá trị hash để làm index lựa chọn link trong EtherChannel. Nếu cả source và destination được hash, switch sẽ thực hiện phép toán exclusive-OR (XOR) trên một hoặc nhiều low-order bits để làm index.
+
+
+#+DOWNLOADED: screenshot @ 2020-11-28 22:22:05
+#+CAPTION:Bảng phân loại EtherChannel Load Balancing
+[[file:_assets/2020-11-28_22-22-05_screenshot.png]]
+
+* TÌNH HUỐNG THỰC NGHIỆM
 ** Tình huống
  Bạn là một chuyên gia về spanning tree và là chuyên gia về sắp xếp lại  toàn hệ thống (migration network). Công ty Corkscrew, một trong những khác hàng của bạn, có vấn đề với mấy cái switch của họ. Có quá nhiều vlans trong mạng lưới của họ và bạn cần phải giản số tính toán của của spanning tree xuống. Và kết quả là bạn phải áp dụng MST(multi spanning tree) cho hệ thống này.
 
 **  Cài PAgP giữa sw1 và sw2. Sw1 chủ động tạo eth-channel và sw2 chỉ phản hồi
-   Note: PAgP là 1 trong 2 giao thức để thương lượng khi muốn lập etherchannel giữa 2 switch để kết hợp nhiều link lại với nhau. PAgP là độc quyền của cisco và dùng 2 mode desirable(chủ động) và auto (bị động) để thương lượng
-    #+begin_src python
+       #+begin_src python
 
       - sw1(config)# int range g1/0-1
 
@@ -27,8 +50,7 @@
 
 
 **  Cài đặt LACP giữa SW1 và SW3. SW1  chủ động tạo Etherchannel và Sw3 chỉ phản hồi lại các yêu cầu đó
-   Note: LACP tương tự như PAgP, nhưng là open standard và  khả năng hỗ trợ số port cao hơn PAgP 
-   #+begin_src python
+      #+begin_src python
    - sw1(config)# int range g3/0-1
    - sw1(config-if-range)# channel-group 13 mode active
    - sw3(config)#int range g3/0-1
@@ -54,12 +76,7 @@
    [[file:_assets/2020-11-27_00-14-31_screenshot.png]]
  
 **  Cài eth channel giữa sw1 và sw2, và dùng destination mac address load-balancing
-#+begin_example
-- Note: load-balancing là quá trình lựa chọn link trên port nào để xử lý dòng dữ liệu. Nghĩa là khi ta gộp 4 link lại với nhau,nếu  có dòng chảy traffic từ A->B không có nghĩa là sẽ chia đều 4 link 25 % traffic(vì như thế sẽ dẫn tới loop nếu có traffic ở chiều ngược lại). Mà sẽ chọn ra một link đại diện. Và link này sẽ được xác định bằng thuật toán. Ở đây thuật toán ~dst-mac~ chọn bit cuối cùng của mac address.
-  - Ví dụ với nếu nếu dòng traffic từ ~0c.5a.95.f7.cc.05~ tới ~0c.5a.95.7e.ab.04~ thì 04 ~ 00000100 vậy 0 là bit cuối cùng ta chọn link tương ứng với cổng đánh số 0
-#+end_example
-    Câu lệnh để điều chỉnh thì chỉ đơn giản như bên dưới, lưu ý phải cài trên cả 2 đầu
-     #+begin_src python
+        #+begin_src python
      - sw1(config)#port-channel load-balance dst-mac
 
      - sw2(config)#port-channel load-balance dst-mac
